@@ -13,6 +13,8 @@ final class JobRecorder
 
     public const string THROW = 'throw';
 
+    public const string TIME_OUT = 'time-out';
+
     /**
      * The attempt count the job saw on each run.
      *

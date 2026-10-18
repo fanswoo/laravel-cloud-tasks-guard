@@ -6,6 +6,7 @@ use Fanswoo\CloudTasksGuard\CloudTasksGuardServiceProvider;
 use Fanswoo\CloudTasksGuard\Tests\Support\DispatchedTask;
 use Fanswoo\CloudTasksGuard\Tests\Support\JobRecorder;
 use Fanswoo\CloudTasksGuard\Tests\Support\TestEnvironment;
+use Fanswoo\CloudTasksGuard\Tests\Support\TimeoutSimulator;
 use Illuminate\Testing\TestResponse;
 use Orchestra\Testbench\TestCase as Orchestra;
 use Stackkit\LaravelGoogleCloudTasksQueue\CloudTasksApi;
@@ -20,6 +21,7 @@ abstract class TestCase extends Orchestra
 
         CloudTasksApi::fake();
         JobRecorder::reset();
+        TimeoutSimulator::reset();
     }
 
     protected function tearDown(): void

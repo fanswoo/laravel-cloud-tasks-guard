@@ -3,6 +3,7 @@
 namespace Fanswoo\CloudTasksGuard\Tests\Fixtures;
 
 use Fanswoo\CloudTasksGuard\Tests\Support\JobRecorder;
+use Fanswoo\CloudTasksGuard\Tests\Support\TimeoutSimulator;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -22,6 +23,7 @@ final class RecordedJob implements ShouldQueue
 
     public function __construct(
         public int $tries = 3,
+        public string $fatalErrorMessage = TimeoutSimulator::TIMEOUT_MESSAGE,
     ) {}
 
     public function handle(): void
@@ -30,6 +32,7 @@ final class RecordedJob implements ShouldQueue
 
         match (JobRecorder::nextAction()) {
             JobRecorder::THROW => throw new RuntimeException('The job failed.'),
+            JobRecorder::TIME_OUT => TimeoutSimulator::shutDownWith($this->fatalErrorMessage),
             default => null,
         };
     }

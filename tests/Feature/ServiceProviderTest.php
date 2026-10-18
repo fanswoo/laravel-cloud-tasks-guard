@@ -1,12 +1,15 @@
 <?php
 
 use Fanswoo\CloudTasksGuard\CloudTasksGuardServiceProvider;
+use Fanswoo\CloudTasksGuard\Guards\HandledTimeoutGuard;
 use Fanswoo\CloudTasksGuard\Guards\UnansweredDeliveryGuard;
 use Illuminate\Support\ServiceProvider;
 
-it('enables the guard by default', function () {
+it('enables both guards by default', function () {
     expect(config('cloud-tasks-guard.count_unanswered_deliveries'))->toBeTrue()
-        ->and(app(UnansweredDeliveryGuard::class)->isEnabled())->toBeTrue();
+        ->and(config('cloud-tasks-guard.answer_handled_timeouts'))->toBeTrue()
+        ->and(app(UnansweredDeliveryGuard::class)->isEnabled())->toBeTrue()
+        ->and(app(HandledTimeoutGuard::class)->isEnabled())->toBeTrue();
 });
 
 it('publishes the configuration file', function () {

@@ -2,14 +2,21 @@
 
 namespace Fanswoo\CloudTasksGuard;
 
+use Fanswoo\CloudTasksGuard\Guards\HandledTimeoutGuard;
 use Fanswoo\CloudTasksGuard\Guards\UnansweredDeliveryGuard;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Http\Request;
+use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Queue\Events\JobTimedOut;
 use Illuminate\Support\ServiceProvider;
+use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskCreated;
 use Stackkit\LaravelGoogleCloudTasksQueue\Events\TaskIncoming;
+use Symfony\Component\ErrorHandler\Error\FatalError;
 
 /**
- * Registers the guards on top of the stackkit Cloud Tasks queue driver.
+ * Registers both guards on top of the stackkit Cloud Tasks queue driver.
  */
 final class CloudTasksGuardServiceProvider extends ServiceProvider
 {
@@ -21,10 +28,11 @@ final class CloudTasksGuardServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__.'/../config/cloud-tasks-guard.php', 'cloud-tasks-guard');
 
         $this->app->singleton(UnansweredDeliveryGuard::class);
+        $this->app->singleton(HandledTimeoutGuard::class);
     }
 
     /**
-     * Register the event listeners.
+     * Register the event listeners and the fatal error render callback.
      */
     public function boot(Dispatcher $events): void
     {
@@ -37,5 +45,24 @@ final class CloudTasksGuardServiceProvider extends ServiceProvider
         });
 
         $events->listen(JobProcessing::class, [UnansweredDeliveryGuard::class, 'handle']);
+        $events->listen(JobProcessing::class, [HandledTimeoutGuard::class, 'trackJob']);
+        $events->listen(JobTimedOut::class, [HandledTimeoutGuard::class, 'recordTimeout']);
+        $events->listen(TaskCreated::class, [HandledTimeoutGuard::class, 'recordCreatedTask']);
+
+        // Listen once every provider has booted, so that this listener runs after
+        // the stackkit listener that writes the failed job to the failed_jobs table.
+        $this->app->booted(function () use ($events): void {
+            $events->listen(JobFailed::class, [HandledTimeoutGuard::class, 'recordFailure']);
+        });
+
+        $this->callAfterResolving(ExceptionHandler::class, function (ExceptionHandler $handler): void {
+            if (! method_exists($handler, 'renderable')) {
+                return;
+            }
+
+            $handler->renderable(
+                fn (FatalError $error, Request $request) => $this->app->make(HandledTimeoutGuard::class)->render($error, $request)
+            );
+        });
     }
 }
