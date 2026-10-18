@@ -1,0 +1,64 @@
+{
+    "name": "fanswoo/laravel-cloud-tasks-guard",
+    "description": "Makes Laravel jobs on Google Cloud Tasks count unanswered deliveries as tries and answer handled timeouts with 200, on top of stackkit/laravel-google-cloud-tasks-queue.",
+    "keywords": [
+        "laravel",
+        "queue",
+        "google",
+        "cloud-tasks",
+        "cloud-run",
+        "retries",
+        "timeout"
+    ],
+    "homepage": "https://github.com/fanswoo/laravel-cloud-tasks-guard",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "fanswoo"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "illuminate/contracts": "^12.0|^13.0",
+        "illuminate/http": "^12.0|^13.0",
+        "illuminate/queue": "^12.0|^13.0",
+        "illuminate/support": "^12.0|^13.0",
+        "stackkit/laravel-google-cloud-tasks-queue": "^6.0",
+        "symfony/error-handler": "^7.2|^8.0"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.20",
+        "orchestra/testbench": "^10.0|^11.0",
+        "pestphp/pest": "^3.8|^4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Fanswoo\\CloudTasksGuard\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Fanswoo\\CloudTasksGuard\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Fanswoo\\CloudTasksGuard\\CloudTasksGuardServiceProvider"
+            ]
+        }
+    },
+    "scripts": {
+        "lint": "pint",
+        "test:lint": "pint --test",
+        "test": "pest"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
