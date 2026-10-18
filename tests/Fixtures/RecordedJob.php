@@ -33,8 +33,16 @@ final class RecordedJob implements ShouldQueue
         match (JobRecorder::nextAction()) {
             JobRecorder::THROW => throw new RuntimeException('The job failed.'),
             JobRecorder::TIME_OUT => TimeoutSimulator::shutDownWith($this->fatalErrorMessage),
+            JobRecorder::DISPATCH_THEN_TIME_OUT => $this->dispatchAnotherJobThenTimeOut(),
             default => null,
         };
+    }
+
+    private function dispatchAnotherJobThenTimeOut(): void
+    {
+        dispatch(new self(tries: 1));
+
+        TimeoutSimulator::shutDownWith($this->fatalErrorMessage);
     }
 
     public function failed(?Throwable $exception): void

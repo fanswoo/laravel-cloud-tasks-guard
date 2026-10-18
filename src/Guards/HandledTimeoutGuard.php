@@ -88,9 +88,9 @@ final class HandledTimeoutGuard
     public function recordCreatedTask(TaskCreated $event): void
     {
         $delivery = $this->delivery();
-        $uuid = $delivery?->job()?->uuid();
+        $uuid = $delivery?->jobUuid();
 
-        if ($delivery !== null && $uuid !== null && $uuid === self::payloadUuid($event->task)) {
+        if ($delivery !== null && $uuid !== null && self::carriesJob($event->task, $uuid)) {
             $delivery->markReleasedTaskCreated();
         }
     }
@@ -132,19 +132,20 @@ final class HandledTimeoutGuard
     }
 
     /**
-     * Get the job UUID from the payload of an HTTP or App Engine task.
+     * Determine whether the payload of an HTTP or App Engine task carries the job with the given UUID.
      */
-    private static function payloadUuid(Task $task): ?string
+    private static function carriesJob(Task $task, string $uuid): bool
     {
         $body = $task->getHttpRequest()?->getBody() ?: $task->getAppEngineHttpRequest()?->getBody();
 
-        if (! is_string($body) || $body === '') {
-            return null;
+        // Skip decoding the payloads of other jobs that the job dispatches.
+        if (! is_string($body) || ! str_contains($body, $uuid)) {
+            return false;
         }
 
         $payload = json_decode($body, true);
 
-        return is_array($payload) && is_string($payload['uuid'] ?? null) ? $payload['uuid'] : null;
+        return is_array($payload) && ($payload['uuid'] ?? null) === $uuid;
     }
 
     /**

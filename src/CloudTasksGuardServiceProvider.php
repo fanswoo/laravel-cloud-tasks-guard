@@ -4,6 +4,7 @@ namespace Fanswoo\CloudTasksGuard;
 
 use Fanswoo\CloudTasksGuard\Guards\HandledTimeoutGuard;
 use Fanswoo\CloudTasksGuard\Guards\UnansweredDeliveryGuard;
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\Request;
@@ -27,8 +28,8 @@ final class CloudTasksGuardServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/cloud-tasks-guard.php', 'cloud-tasks-guard');
 
-        $this->app->singleton(UnansweredDeliveryGuard::class);
-        $this->app->singleton(HandledTimeoutGuard::class);
+        $this->app->scoped(UnansweredDeliveryGuard::class);
+        $this->app->scoped(HandledTimeoutGuard::class);
     }
 
     /**
@@ -55,13 +56,15 @@ final class CloudTasksGuardServiceProvider extends ServiceProvider
             $events->listen(JobFailed::class, [HandledTimeoutGuard::class, 'recordFailure']);
         });
 
-        $this->callAfterResolving(ExceptionHandler::class, function (ExceptionHandler $handler): void {
+        $this->callAfterResolving(ExceptionHandler::class, function (ExceptionHandler $handler, Container $container): void {
             if (! method_exists($handler, 'renderable')) {
                 return;
             }
 
             $handler->renderable(
-                fn (FatalError $error, Request $request) => $this->app->make(HandledTimeoutGuard::class)->render($error, $request)
+                fn (FatalError $error, mixed $request) => $request instanceof Request
+                    ? $container->make(HandledTimeoutGuard::class)->render($error, $request)
+                    : null
             );
         });
     }

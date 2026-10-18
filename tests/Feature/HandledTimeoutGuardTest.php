@@ -53,6 +53,20 @@ it('keeps the 500 when the released copy could not be created', function () {
         ->and(JobRecorder::$failures)->toBeEmpty();
 });
 
+it('does not mistake another task that the job dispatched for the released copy', function () {
+    JobRecorder::script(JobRecorder::DISPATCH_THEN_TIME_OUT);
+
+    $task = $this->dispatchToCloudTasks(new RecordedJob(tries: 3));
+
+    // The job's own dispatch succeeds, then the release of the timed-out job fails.
+    CloudTasksApi::swap($api = new UnavailableCloudTasksApi(successfulCreates: 1));
+
+    $this->deliver($task);
+
+    expect($api->createdTasks)->toHaveCount(1)
+        ->and(TimeoutSimulator::$response?->getStatusCode())->toBe(500);
+});
+
 it('keeps the 500 when the worker did not handle the timeout', function () {
     app(ExceptionHandler::class)->dontReport(FatalError::class);
 

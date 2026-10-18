@@ -20,6 +20,8 @@ final class TaskDelivery
 
     private ?CloudTasksJob $job = null;
 
+    private ?string $jobUuid = null;
+
     private bool $unansweredDeliveriesCounted = false;
 
     private bool $timedOut = false;
@@ -69,6 +71,14 @@ final class TaskDelivery
     public function job(): ?CloudTasksJob
     {
         return $this->job;
+    }
+
+    /**
+     * Get the UUID of the delivered job, once it has been attached.
+     */
+    public function jobUuid(): ?string
+    {
+        return $this->jobUuid ??= $this->job?->uuid();
     }
 
     /**

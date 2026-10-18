@@ -15,6 +15,8 @@ final class JobRecorder
 
     public const string TIME_OUT = 'time-out';
 
+    public const string DISPATCH_THEN_TIME_OUT = 'dispatch-then-time-out';
+
     /**
      * The attempt count the job saw on each run.
      *
