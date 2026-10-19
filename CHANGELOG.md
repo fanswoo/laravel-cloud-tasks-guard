@@ -2,6 +2,12 @@
 
 All notable changes to this package are documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the package follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- The README's limit on PHP's time limit now says that it depends on the PHP build: a thread-safe build on Linux, such as FrankenPHP's, counts wall-clock time, so a job that waits on I/O is ended at its timeout; only a non-thread-safe build counts CPU time alone.
+
 ## [1.0.0] - 2026-10-18
 
 ### Added
@@ -12,4 +18,5 @@ All notable changes to this package are documented in this file. The format is b
 - Documentation of the Cloud Tasks queue settings that the guards need, and of their limits.
 - Support for PHP 8.3 to 8.5, Laravel 12 and 13, and `stackkit/laravel-google-cloud-tasks-queue` 6.x.
 
+[Unreleased]: https://github.com/fanswoo/laravel-cloud-tasks-guard/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/fanswoo/laravel-cloud-tasks-guard/releases/tag/v1.0.0
