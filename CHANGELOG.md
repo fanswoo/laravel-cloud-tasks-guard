@@ -4,8 +4,17 @@ All notable changes to this package are documented in this file. The format is b
 
 ## [Unreleased]
 
+### Added
+
+- The `started_deliveries_store` option (`CLOUD_TASKS_GUARD_STARTED_DELIVERIES_STORE`): the cache store in which `UnansweredDeliveryGuard` counts, per task, the deliveries that started the job. `null`, the default, uses the default cache store.
+
+### Changed
+
+- `UnansweredDeliveryGuard` needs a cache store that every instance shares and that keeps its entries when an instance stops, such as Redis, Memcached, DynamoDB, or the database store. With the `array` store or a `file` store on each instance's own disk, it counts nothing.
+
 ### Fixed
 
+- `UnansweredDeliveryGuard` no longer counts deliveries that ended in a 5xx before the job started as tries. `X-CloudTasks-TaskRetryCount` includes them, so three 503s during a cold start failed a job with `$tries = 3` that never ran. The guard now records every delivery that reaches `JobProcessing` in the cache, keyed by `X-CloudTasks-QueueName` and `X-CloudTasks-TaskName`, and adds only `max(0, min(retry count - execution count, started deliveries - execution count))` to the attempts. A missing or malformed queue or task name, or a cache store that is not defined or fails, adds nothing.
 - The README's limit on PHP's time limit now says that it depends on the PHP build: a thread-safe build on Linux, such as FrankenPHP's, counts wall-clock time, so a job that waits on I/O is ended at its timeout; only a non-thread-safe build counts CPU time alone.
 
 ## [1.0.0] - 2026-10-18

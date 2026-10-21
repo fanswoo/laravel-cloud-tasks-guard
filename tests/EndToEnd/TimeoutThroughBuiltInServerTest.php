@@ -1,6 +1,7 @@
 <?php
 
 use Fanswoo\CloudTasksGuard\Tests\Fixtures\BusyTimeoutJob;
+use Fanswoo\CloudTasksGuard\Tests\Fixtures\MemoryExhaustingJob;
 use Fanswoo\CloudTasksGuard\Tests\Support\BuiltInServer;
 use Fanswoo\CloudTasksGuard\Tests\Support\DispatchedTask;
 use Google\Cloud\Tasks\V2\Task;
@@ -97,14 +98,44 @@ it('ends a real timeout with 500 beside the released copy without the guard', fu
         ->and($this->server->createdTaskPayloads())->toHaveCount(1);
 });
 
-it('fails a job over HTTP once the unanswered deliveries use up its tries', function () {
+it('fails a job over HTTP once the deliveries that crashed in it use up its tries', function () {
     $this->server = BuiltInServer::start();
-    $task = $this->dispatchToCloudTasks(new BusyTimeoutJob($this->server->stateDirectory, tries: 2));
+    $task = $this->dispatchToCloudTasks(new MemoryExhaustingJob($this->server->stateDirectory, tries: 2));
 
-    $response = deliverOverHttp($this->server, $task, retryCount: 2, executionCount: 0);
+    // Each delivery ends in a fatal error after the job started, so Cloud Tasks
+    // gets a 500 and delivers the same task again.
+    $first = deliverOverHttp($this->server, $task, retryCount: 0, executionCount: 0);
+    $second = deliverOverHttp($this->server, $task, retryCount: 1, executionCount: 0);
+    $third = deliverOverHttp($this->server, $task, retryCount: 2, executionCount: 0);
 
-    expect($response->status())->toBe(200, $this->server->diagnostics())
-        ->and($this->server->jobLog())->toBe(['failed '.MaxAttemptsExceededException::class])
+    expect($first->status())->toBe(500, $this->server->diagnostics())
+        ->and($second->status())->toBe(500, $this->server->diagnostics())
+        ->and($third->status())->toBe(200, $this->server->diagnostics())
+        ->and($this->server->jobLog())->toBe([
+            'run attempts=1',
+            'run attempts=2',
+            'failed '.MaxAttemptsExceededException::class,
+        ])
         ->and($this->server->createdTaskPayloads())->toBeEmpty()
+        ->and($this->server->failedJobs())->toHaveCount(1);
+});
+
+it('does not count deliveries over HTTP that failed before the job started', function () {
+    $this->server = BuiltInServer::start();
+    $task = $this->dispatchToCloudTasks(new MemoryExhaustingJob($this->server->stateDirectory, tries: 2));
+
+    // The first two deliveries ended in a 5xx before they reached the application.
+    $first = deliverOverHttp($this->server, $task, retryCount: 2, executionCount: 0);
+    $second = deliverOverHttp($this->server, $task, retryCount: 3, executionCount: 0);
+    $third = deliverOverHttp($this->server, $task, retryCount: 4, executionCount: 0);
+
+    expect($first->status())->toBe(500, $this->server->diagnostics())
+        ->and($second->status())->toBe(500, $this->server->diagnostics())
+        ->and($third->status())->toBe(200, $this->server->diagnostics())
+        ->and($this->server->jobLog())->toBe([
+            'run attempts=1',
+            'run attempts=2',
+            'failed '.MaxAttemptsExceededException::class,
+        ])
         ->and($this->server->failedJobs())->toHaveCount(1);
 });

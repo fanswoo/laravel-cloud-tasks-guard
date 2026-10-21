@@ -53,6 +53,21 @@ it('returns no counters when a header is missing or not a plain integer', functi
     'list of values' => ['1, 2', '0'],
 ]);
 
+it('counts only the unanswered deliveries in which the job started', function (int $retryCount, int $executionCount, int $startedDeliveries, int $crashedDeliveries) {
+    expect((new DeliveryCounters($retryCount, $executionCount))->crashedDeliveries($startedDeliveries))->toBe($crashedDeliveries);
+})->with([
+    'first delivery' => [0, 0, 0, 0],
+    'failures before the job started' => [3, 0, 0, 0],
+    'every delivery crashed' => [3, 0, 3, 3],
+    'two failures before the job started, then two crashes' => [4, 0, 2, 2],
+    'more started deliveries than unanswered ones' => [2, 0, 5, 2],
+    'answers before the job started' => [2, 2, 0, 0],
+    'an answer before the job started, then one crash' => [2, 1, 1, 0],
+    'an answer before the job started, then two crashes' => [3, 1, 2, 1],
+    'more executions than retries' => [1, 3, 4, 0],
+    'more executions than started deliveries' => [3, 2, 1, 0],
+]);
+
 it('never reports a negative number of unanswered deliveries', function () {
     expect((new DeliveryCounters(retryCount: 1, executionCount: 3))->unansweredDeliveries())->toBe(0);
 });

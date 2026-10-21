@@ -10,7 +10,9 @@
  * The test process passes these environment variables:
  *
  * - CLOUD_TASKS_GUARD_E2E_STATE: a directory where this application records the
- *   tasks it creates, its log, and its failed jobs, for the test to read.
+ *   tasks it creates, its log, and its failed jobs, for the test to read. It
+ *   also holds the cache store of the started deliveries, which outlives each
+ *   request as a shared cache outlives each instance.
  * - CLOUD_TASKS_GUARD_E2E_ANSWER_HANDLED_TIMEOUTS: "false" disables that guard.
  */
 
@@ -50,6 +52,11 @@ $app['config']->set('queue.failed', [
     'driver' => 'file',
     'path' => $stateDirectory.'/failed-jobs.json',
 ]);
+$app['config']->set('cache.stores.started-deliveries', [
+    'driver' => 'file',
+    'path' => $stateDirectory.'/cache',
+]);
+$app['config']->set('cloud-tasks-guard.started_deliveries_store', 'started-deliveries');
 $app['config']->set('logging.default', 'single');
 $app['config']->set('logging.channels.single.path', $stateDirectory.'/laravel.log');
 $app['config']->set(

@@ -3,6 +3,7 @@
 namespace Fanswoo\CloudTasksGuard\Tests\Support;
 
 use Fanswoo\CloudTasksGuard\DeliveryCounters;
+use Fanswoo\CloudTasksGuard\TaskIdentity;
 use Google\Cloud\Tasks\V2\Task;
 use Illuminate\Support\Str;
 
@@ -51,6 +52,14 @@ final readonly class DispatchedTask
     }
 
     /**
+     * The identity that a delivery of this task carries in its headers.
+     */
+    public function identity(): TaskIdentity
+    {
+        return new TaskIdentity(TestEnvironment::QUEUE, $this->shortName());
+    }
+
+    /**
      * The headers of a delivery of this task. A null counter leaves its header out.
      *
      * @return array<string, string>
@@ -59,8 +68,8 @@ final readonly class DispatchedTask
     {
         $headers = [
             'Content-Type' => 'application/json',
-            'X-CloudTasks-QueueName' => TestEnvironment::QUEUE,
-            'X-CloudTasks-TaskName' => $this->shortName(),
+            TaskIdentity::QUEUE_NAME_HEADER => TestEnvironment::QUEUE,
+            TaskIdentity::TASK_NAME_HEADER => $this->shortName(),
         ];
 
         if ($retryCount !== null) {

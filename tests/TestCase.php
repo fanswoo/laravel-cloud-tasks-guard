@@ -3,6 +3,8 @@
 namespace Fanswoo\CloudTasksGuard\Tests;
 
 use Fanswoo\CloudTasksGuard\CloudTasksGuardServiceProvider;
+use Fanswoo\CloudTasksGuard\StartedDeliveries;
+use Fanswoo\CloudTasksGuard\TaskIdentity;
 use Fanswoo\CloudTasksGuard\Tests\Support\DispatchedTask;
 use Fanswoo\CloudTasksGuard\Tests\Support\JobRecorder;
 use Fanswoo\CloudTasksGuard\Tests\Support\TestEnvironment;
@@ -89,12 +91,34 @@ abstract class TestCase extends Orchestra
      */
     public function deliver(DispatchedTask $task, int|string|null $retryCount = 0, int|string|null $executionCount = 0): TestResponse
     {
+        return $this->deliverWithHeaders($task, $task->headers($retryCount, $executionCount));
+    }
+
+    /**
+     * Deliver the task to the task handler with the given headers.
+     *
+     * @param  array<string, string>  $headers
+     */
+    public function deliverWithHeaders(DispatchedTask $task, array $headers): TestResponse
+    {
         return $this->call(
             method: 'POST',
             uri: route('cloud-tasks.handle-task'),
-            server: $this->transformHeadersToServerVars($task->headers($retryCount, $executionCount)),
+            server: $this->transformHeadersToServerVars($headers),
             content: $task->body(),
         );
+    }
+
+    /**
+     * Record deliveries of the task that started the job, as earlier deliveries would have.
+     */
+    public function recordStartedDeliveries(DispatchedTask|TaskIdentity $task, int $count): void
+    {
+        $identity = $task instanceof DispatchedTask ? $task->identity() : $task;
+
+        for ($recorded = 0; $recorded < $count; $recorded++) {
+            $this->assertNotNull(app(StartedDeliveries::class)->record($identity));
+        }
     }
 
     /**
